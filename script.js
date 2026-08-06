@@ -2,6 +2,7 @@ const searchInput = document.getElementById('search-input');
 const searchBtn = document.getElementById('search-btn');
 const categorySelect = document.getElementById('category-select');
 const areaSelect = document.getElementById('area-select');
+const resetBtn = document.getElementById('reset-btn');
 const recipeGrid = document.getElementById('recipe-grid');
 const loader = document.getElementById('loader');
 const recentContainer = document.getElementById('recent-container');
@@ -14,10 +15,9 @@ const API_BASE = 'https://www.themealdb.com/api/json/v1/1/';
 
 // Initialize App
 document.addEventListener('DOMContentLoaded', () => {
-    fetchCategories();
-    fetchAreas();
+    fetchCategoriesWithCount(); // Category count wala function
+    fetchAreasWithCount();     // Area count wala function
     renderRecentSearches();
-    // Load default initial query to show some items
     searchRecipes('chicken');
 });
 
@@ -46,6 +46,14 @@ areaSelect.addEventListener('change', () => {
     if (area) filterByArea(area);
 });
 
+// Reset Button Event Listener
+resetBtn.addEventListener('click', () => {
+    searchInput.value = "";
+    categorySelect.value = "";
+    areaSelect.value = "";
+    searchRecipes('chicken');
+});
+
 closeModal.addEventListener('click', () => {
     recipeModal.style.display = 'none';
 });
@@ -56,32 +64,65 @@ window.addEventListener('click', (e) => {
     }
 });
 
-// Fetch Dropdown Data
-async function fetchCategories() {
+// --- Fetch Categories with Recipe Count ---
+async function fetchCategoriesWithCount() {
     try {
         const res = await fetch(`${API_BASE}categories.php`);
         const data = await res.json();
-        data.categories.forEach(cat => {
-            const option = document.createElement('option');
-            option.value = cat.strCategory;
-            option.textContent = cat.strCategory;
-            categorySelect.appendChild(option);
-        });
+        
+        if (!data.categories) return;
+
+        for (let cat of data.categories) {
+            const catName = cat.strCategory;
+            try {
+                const catRes = await fetch(`${API_BASE}filter.php?c=${catName}`);
+                const catData = await catRes.json();
+                
+                const count = catData.meals ? catData.meals.length : 0;
+                
+                if (count > 0) {
+                    const option = document.createElement('option');
+                    option.value = catName;
+                    option.textContent = `${catName} (${count})`;
+                    categorySelect.appendChild(option);
+                }
+            } catch (err) {
+                console.error(`Error fetching count for category ${catName}`, err);
+            }
+        }
     } catch (error) {
         console.error('Error fetching categories:', error);
     }
 }
 
-async function fetchAreas() {
+// --- Fetch Areas with Recipe Count ---
+async function fetchAreasWithCount() {
     try {
         const res = await fetch(`${API_BASE}list.php?a=list`);
         const data = await res.json();
-        data.meals.forEach(item => {
-            const option = document.createElement('option');
-            option.value = item.strArea;
-            option.textContent = item.strArea;
-            areaSelect.appendChild(option);
-        });
+        
+        if (!data.meals) return;
+
+        for (let item of data.meals) {
+            const areaName = item.strArea;
+            if (areaName && areaName.trim() !== "") {
+                try {
+                    const areaRes = await fetch(`${API_BASE}filter.php?a=${areaName}`);
+                    const areaData = await areaRes.json();
+                    
+                    const count = areaData.meals ? areaData.meals.length : 0;
+                    
+                    if (count > 0) {
+                        const option = document.createElement('option');
+                        option.value = areaName;
+                        option.textContent = `${areaName} (${count})`;
+                        areaSelect.appendChild(option);
+                    }
+                } catch (err) {
+                    console.error(`Error fetching count for area ${areaName}`, err);
+                }
+            }
+        }
     } catch (error) {
         console.error('Error fetching areas:', error);
     }
@@ -103,11 +144,14 @@ async function searchRecipes(query) {
 }
 
 async function filterByCategory(category) {
+    if (!category) return;
+    searchInput.value = "";
+    areaSelect.value = "";
     showLoader(true);
     try {
         const res = await fetch(`${API_BASE}filter.php?c=${category}`);
         const data = await res.json();
-        displayRecipes(data.meals);
+        displayFilteredRecipes(data.meals, category, null);
     } catch (error) {
         displayRecipes(null);
     } finally {
@@ -116,11 +160,14 @@ async function filterByCategory(category) {
 }
 
 async function filterByArea(area) {
+    if (!area) return;
+    searchInput.value = "";
+    categorySelect.value = "";
     showLoader(true);
     try {
         const res = await fetch(`${API_BASE}filter.php?a=${area}`);
         const data = await res.json();
-        displayRecipes(data.meals);
+        displayFilteredRecipes(data.meals, null, area);
     } catch (error) {
         displayRecipes(null);
     } finally {
@@ -153,10 +200,42 @@ function displayRecipes(meals) {
         card.innerHTML = `
             <img src="${meal.strMealThumb}" alt="${meal.strMeal}">
             <div class="recipe-info">
+                <div class="row">
+                    <h3>${meal.strMeal}</h3>
+                    <div class="recipe-badges">
+                        ${meal.strCategory ? `<span class="badge">${meal.strCategory}</span>` : ''}
+                        ${meal.strArea ? `<span class="badge area">${meal.strArea}</span>` : ''}
+                    </div>
+                </div>
+                <button class="view-btn" onclick="fetchRecipeDetails('${meal.idMeal}')">View Recipe</button>
+            </div>
+        `;
+        recipeGrid.appendChild(card);
+    });
+}
+
+function displayFilteredRecipes(meals, categoryBadge = null, areaBadge = null) {
+    recipeGrid.innerHTML = '';
+    
+    if (!meals) {
+        recipeGrid.innerHTML = `<div class="no-results">No recipes found. Try another search term or filter!</div>`;
+        return;
+    }
+
+    meals.forEach(meal => {
+        const card = document.createElement('div');
+        card.className = 'recipe-card';
+        
+        const catTag = meal.strCategory || categoryBadge;
+        const areaTag = meal.strArea || areaBadge;
+
+        card.innerHTML = `
+            <img src="${meal.strMealThumb}" alt="${meal.strMeal}">
+            <div class="recipe-info">
                 <h3>${meal.strMeal}</h3>
                 <div class="recipe-badges">
-                    ${meal.strCategory ? `<span class="badge">${meal.strCategory}</span>` : ''}
-                    ${meal.strArea ? `<span class="badge area">${meal.strArea}</span>` : ''}
+                    ${catTag ? `<span class="badge">${catTag}</span>` : ''}
+                    ${areaTag ? `<span class="badge area">${areaTag}</span>` : ''}
                 </div>
                 <button class="view-btn" onclick="fetchRecipeDetails('${meal.idMeal}')">View Recipe</button>
             </div>
@@ -166,7 +245,6 @@ function displayRecipes(meals) {
 }
 
 function showRecipeModal(meal) {
-    // Extract ingredients and measurements
     let ingredientsHTML = '';
     for (let i = 1; i <= 20; i++) {
         const ingredient = meal[`strIngredient${i}`];
@@ -199,17 +277,16 @@ function showLoader(show) {
 // Local Storage Handling for Recent Searches
 function saveRecentSearch(query) {
     let searches = JSON.parse(localStorage.getItem('recentSearches')) || [];
-    // Remove if already exists to prevent duplicates, add to front
     searches = searches.filter(item => item.toLowerCase() !== query.toLowerCase());
     searches.unshift(query);
-    // Limit to last 5 searches
     if (searches.length > 5) searches.pop();
     localStorage.setItem('recentSearches', JSON.stringify(searches));
     renderRecentSearches();
 }
 
+// --- Updated Function: Render Recent Searches with Remove (X) Button ---
 function renderRecentSearches() {
-    const searches = JSON.parse(localStorage.getItem('recentSearches')) || [];
+    let searches = JSON.parse(localStorage.getItem('recentSearches')) || [];
     recentContainer.innerHTML = '';
     
     if (searches.length === 0) return;
@@ -223,11 +300,46 @@ function renderRecentSearches() {
     searches.forEach(term => {
         const tag = document.createElement('span');
         tag.className = 'recent-tag';
-        tag.textContent = term;
-        tag.addEventListener('click', () => {
+        tag.style.display = 'inline-flex';
+        tag.style.alignItems = 'center';
+        tag.style.gap = '6px';
+        
+        // Text part (Click karne par search ho jayega)
+        const textSpan = document.createElement('span');
+        textSpan.textContent = term;
+        textSpan.style.cursor = 'pointer';
+        textSpan.addEventListener('click', () => {
             searchInput.value = term;
             searchRecipes(term);
         });
+
+        // Close/Remove button part (X icon)
+        const removeBtn = document.createElement('span');
+        removeBtn.textContent = '×';
+        removeBtn.style.fontWeight = 'bold';
+        removeBtn.style.cursor = 'pointer';
+        removeBtn.style.color = '#888';
+        removeBtn.title = 'Remove';
+        
+        removeBtn.addEventListener('mouseover', () => removeBtn.style.color = '#ff4d4d');
+        removeBtn.addEventListener('mouseout', () => removeBtn.style.color = '#888');
+
+        // Remove button click event
+        removeBtn.addEventListener('click', (e) => {
+            e.stopPropagation(); // Parent click trigger hone se rokay ga
+            removeRecentSearch(term);
+        });
+
+        tag.appendChild(textSpan);
+        tag.appendChild(removeBtn);
         recentContainer.appendChild(tag);
     });
+}
+
+// Helper function to remove a single recent search item
+function removeRecentSearch(termToRemove) {
+    let searches = JSON.parse(localStorage.getItem('recentSearches')) || [];
+    searches = searches.filter(item => item.toLowerCase() !== termToRemove.toLowerCase());
+    localStorage.setItem('recentSearches', JSON.stringify(searches));
+    renderRecentSearches();
 }
