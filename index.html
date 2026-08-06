@@ -1,0 +1,56 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Weather Application</title>
+    <link rel="stylesheet" href="style.css">
+    <!-- FontAwesome for Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+</head>
+<body>
+ 
+    <div class="container">
+        <header>
+            <h1>Recipe Finder</h1>
+            <p>Discover delicious meals from around the world</p>
+        </header>
+
+        <!-- Search Controls -->
+        <div class="search-controls">
+            <input type="text" id="search-input" placeholder="Search recipe by name (e.g., Chicken)...">
+            <select id="category-select">
+                <option value="">All Categories</option>
+            </select>
+            <select id="area-select">
+                <option value="">All Cuisines (Areas)</option>
+            </select>
+            <button id="search-btn">Search</button>
+        </div>
+
+        <!-- Recent Searches Container -->
+        <div class="recent-searches" id="recent-container"></div>
+
+        <!-- Loading Indicator -->
+        <div class="loader" id="loader">
+            <div class="spinner"></div>
+            <p>Searching recipes...</p>
+        </div>
+
+        <!-- Recipe Results Grid -->
+        <div class="recipe-grid" id="recipe-grid">
+            <div class="no-results">Use the search bar or filters to find recipes.</div>
+        </div>
+    </div>
+
+    <!-- Details Modal -->
+    <div class="modal" id="recipe-modal">
+        <div class="modal-content" id="modal-content">
+            <button class="close-btn" id="close-modal">&times;</button>
+            <!-- Dynamic Recipe Details Go Here -->
+        </div>
+    </div>
+
+    <script src="script.js"></script>
+</body>
+</html>
