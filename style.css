@@ -95,7 +95,7 @@
 
     .recent-tag {
         background-color: #e2e8f0;
-        padding: 5px 12px;
+        padding: 2px 12px 5px 12px;
         border-radius: 20px;
         font-size: 0.85rem;
         cursor: pointer;
@@ -159,6 +159,7 @@
         padding: 15px;
         display: flex;
         flex-direction: column;
+        justify-content: space-between;
         flex: 1;
     }
 
@@ -250,13 +251,21 @@
         position: absolute;
         top: 15px;
         right: 15px;
-        background: #eee;
+        background: #000000;
         border: none;
         font-size: 1.2rem;
         width: 35px;
         height: 35px;
         border-radius: 50%;
         cursor: pointer;
+        color: #ffffff;
+        text-align: center;
+        line-height: 0px;
+        padding: 0px 0px 3px 0px !important;
+    }
+
+    .close-btn:hover {
+        background: linear-gradient(135deg, var(--primary-color), var(--secondary-color));
     }
 
     .modal-content img {
@@ -280,4 +289,13 @@
         white-space: pre-line;
         font-size: 0.95rem;
         color: #444;
+    }
+
+
+    #reset-btn {
+    background: #6c757d;
+
+    }
+    #reset-btn:hover {
+        background: #5a6268;
     }
